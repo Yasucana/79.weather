@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Simulator</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        #weatherCanvas {
+            border: 1px solid #000;
+        }
+        #weatherSelect {
+            margin-bottom: 10px;
+            padding: 5px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <select id="weatherSelect">
+        <option value="rain">Rain</option>
+        <option value="thunderstorm">Thunderstorm</option>
+        <option value="sunny">Sunny</option>
+        <option value="snow">Snow</option>
+    </select>
+    <canvas id="weatherCanvas" width="800" height="600"></canvas>
+    <script>
+        const canvas = document.getElementById('weatherCanvas');
+        const ctx = canvas.getContext('2d');
+        const select = document.getElementById('weatherSelect');
+        
+        let particles = [];
+        let weather = 'rain';
+        let lastThunder = 0;
+
+        class Particle {
+            constructor(x, y, vx, vy, size, color) {
+                this.x = x;
+                this.y = y;
+                this.vx = vx;
+                this.vy = vy;
+                this.size = size;
+                this.color = color;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                if (this.y > canvas.height || this.x < 0 || this.x > canvas.width) {
+                    this.reset();
+                }
+            }
+            reset() {
+                this.x = Math.random() * canvas.width;
+                this.y = 0;
+            }
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                if (weather === 'snow') {
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                } else {
+                    ctx.fillRect(this.x, this.y, this.size, this.size * 2);
+                }
+                ctx.fill();
+            }
+        }
+
+        function initParticles(count, type) {
+            particles = [];
+            for (let i = 0; i < count; i++) {
+                let x = Math.random() * canvas.width;
+                let y = Math.random() * canvas.height;
+                let vx = (type === 'snow') ? (Math.random() - 0.5) * 2 : 0;
+                let vy = (type === 'snow') ? Math.random() * 2 + 1 : Math.random() * 5 + 2;
+                let size = (type === 'snow') ? Math.random() * 3 + 2 : Math.random() * 2 + 1;
+                let color = (type === 'snow') ? '#fff' : '#00f';
+                particles.push(new Particle(x, y, vx, vy, size, color));
+            }
+        }
+
+        function drawSunAndClouds() {
+            // Sun
+            ctx.fillStyle = '#ff0';
+            ctx.beginPath();
+            ctx.arc(100, 100, 50, 0, Math.PI * 2);
+            ctx.fill();
+            // Clouds
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(200 + (Date.now() % 2000) / 10, 150, 40, 0, Math.PI * 2);
+            ctx.arc(250 + (Date.now() % 2000) / 10, 140, 50, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Set background color based on weather
+            ctx.fillStyle = weather === 'sunny' ? '#87ceeb' : weather === 'snow' ? '#d3e3fc' : '#666';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (weather === 'sunny') {
+                drawSunAndClouds();
+                ctx.fillStyle = '#000';
+                ctx.font = '16px Arial';
+                ctx.fillText('Cloud Speed: ~10px/sec', canvas.width - 150, canvas.height - 20);
+            } else {
+                if (weather === 'thunderstorm' && Date.now() - lastThunder > 3000 && Math.random() < 0.02) {
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    lastThunder = Date.now();
+                }
+                particles.forEach(p => {
+                    p.update();
+                    p.draw();
+                });
+                // Data visualization
+                ctx.fillStyle = '#000';
+                ctx.font = '16px Arial';
+                ctx.fillText(`Particles: ${particles.length}, Speed: ~${Math.round(particles[0]?.vy || 0)}px/frame`, 
+                            canvas.width - 150, canvas.height - 20);
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        select.addEventListener('change', (e) => {
+            weather = e.target.value;
+            if (weather === 'rain') initParticles(100, 'rain');
+            else if (weather === 'thunderstorm') initParticles(100, 'rain');
+            else if (weather === 'snow') initParticles(50, 'snow');
+            else particles = []; // Sunny
+        });
+
+        // Initialize
+        initParticles(100, 'rain');
+        animate();
+    </script>
+</body>
+</html>
